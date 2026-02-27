@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bash - local</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* BASE STYLES */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background-color: #0c0c0c; /* Starts dark for terminal */
+            transition: background 2s ease;
+        }
+
+        /* --- TERMINAL (BACKEND) UI --- */
+        #terminal-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #d4d4d4;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 15px;
+            line-height: 1.4;
+            overflow-y: auto;
+            transition: opacity 1s ease, transform 1s ease;
+            z-index: 10;
+        }
+
+        #terminal-container::-webkit-scrollbar { width: 8px; }
+        #terminal-container::-webkit-scrollbar-track { background: #0c0c0c; }
+        #terminal-container::-webkit-scrollbar-thumb { background: #333; }
+
+        .input-line { display: flex; align-items: center; }
+        #hidden-input { opacity: 0; position: absolute; z-index: -100; }
+        
+        .cursor {
+            display: inline-block;
+            width: 8px; height: 16px;
+            background-color: #d4d4d4;
+            animation: blink 1s step-end infinite;
+            vertical-align: bottom;
+            margin-left: 2px;
+        }
+        .cursor.typing { animation: none; opacity: 1; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .color-error { color: #f44336; }
+        .color-success { color: #4caf50; }
+        .color-highlight { color: #569cd6; }
+
+        /* --- FRONTEND (ROMANTIC) UI --- */
+        #frontend-container {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none; /* Can't click until visible */
+            transition: opacity 1.5s ease;
+            z-index: 20;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Animated gradient background applied via JS */
+        .frontend-bg {
+            background: linear-gradient(-45deg, #1e1b4b, #312e81, #0f172a, #4c1d95) !important;
+            background-size: 400% 400% !important;
+            animation: gradientBG 15s ease infinite !important;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            max-width: 500px;
+            width: 85%;
+            text-align: center;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+            color: white;
+        }
+
+        .glass-card h1 {
+            font-size: 3.5rem;
+            margin: 0 0 10px 0;
+        }
+
+        .glass-card h2 {
+            font-weight: 400;
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+            color: #fbcfe8;
+        }
+
+        .glass-card p {
+            font-weight: 300;
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin-bottom: 2.5rem;
+        }
+
+        .btn-proceed {
+            background: linear-gradient(135deg, #fb7185, #db2777);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 14px 32px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(219, 39, 119, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-proceed:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(219, 39, 119, 0.6);
+        }
+
+        /* Flower animations */
+        .flower {
+            position: fixed;
+            pointer-events: none;
+            z-index: 15;
+            animation: floatUp ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(100vh) rotate(0deg) scale(0.5); opacity: 1; }
+            100% { transform: translateY(-20vh) rotate(360deg) scale(1.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body onclick="focusInput()">
+
+    <!-- 1. TERMINAL UI -->
+    <div id="terminal-container">
+        <div id="terminal-output"></div>
+        <div id="active-prompt-area" style="display: none;">
+            <span id="prompt-text"></span><span id="user-typed"></span><span id="cursor" class="cursor"></span>
+        </div>
+        <input type="text" id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+
+    <!-- 2. FRONTEND UI -->
+    <div id="frontend-container">
+        <div class="glass-card" id="glass-card">
+            <h1>🌸</h1>
+            <h2>I hope the next ones I give you are real. 🌻</h2>
+            <p>Shall we proceed with our date?</p>
+            <button class="btn-proceed" onclick="goToMeet()">Yes, let's go →</button>
+        </div>
+    </div>
+
+    <script>
+        const terminalOutput = document.getElementById('terminal-output');
+        const hiddenInput = document.getElementById('hidden-input');
+        const userTyped = document.getElementById('user-typed');
+        const promptText = document.getElementById('prompt-text');
+        const activePromptArea = document.getElementById('active-prompt-area');
+        const cursor = document.getElementById('cursor');
+
+        // Keep input focused for mobile keyboards
+        function focusInput() {
+            if(document.getElementById('terminal-container').style.opacity !== '0') {
+                hiddenInput.focus();
+            }
+        }
+
+        // Terminal Boot Sequence
+        const bootSequence = [
+            "openssl req -new -newkey rsa:4096 -nodes -keyout exception.key -out reschedule.csr",
+            "Generating a 4096 bit RSA private key...",
+            "......................................................++",
+            ".....................++",
+            "writing new private key to 'exception.key'",
+            "-----",
+            "You are about to be asked to enter information that will be incorporated",
+            "into your secure date request.",
+            "What you are about to enter is what is called a Distinguished Name or a DN.",
+            "-----"
+        ];
+
+        // Terminal Auto-Inputs
+        const autoInputs = [
+            { prompt: "Incident Type (eg, failure) []:", answer: "UNEXPECTED_URGENT_EXCEPTION" },
+            { prompt: "Action Taken (eg, fix) []:", answer: "CODED_VIRTUAL_BOUQUET" },
+            { prompt: "Security Note (eg, warning) []:", answer: "ASKING_FOR_ADDRESS_ON_DAY_ONE_IS_A_VULNERABILITY" }
+        ];
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        function printLine(text, cssClass = "") {
+            const div = document.createElement('div');
+            if(cssClass) div.className = cssClass;
+            div.textContent = text;
+            terminalOutput.appendChild(div);
+            document.getElementById('terminal-container').scrollTop = terminalOutput.scrollHeight;
+        }
+
+        async function typeText(text, element) {
+            cursor.classList.add('typing');
+            for (let char of text) {
+                element.textContent += char;
+                await sleep(Math.random() * 50 + 30);
+            }
+            cursor.classList.remove('typing');
+        }
+
+        async function runScript() {
+            for (let line of bootSequence) {
+                printLine(line);
+                await sleep(300);
+            }
+            await sleep(500);
+
+            for (let item of autoInputs) {
+                const lineDiv = document.createElement('div');
+                lineDiv.textContent = item.prompt + " ";
+                terminalOutput.appendChild(lineDiv);
+                await sleep(400);
+                
+                const answerSpan = document.createElement('span');
+                lineDiv.appendChild(answerSpan);
+                await typeText(item.answer, answerSpan);
+                await sleep(200);
+            }
+
+            printLine("-----");
+            printLine("Compiling frontend payload...");
+            await sleep(600);
+            printLine("Establishing secure P2P connection protocol.");
+            await sleep(400);
+            printLine("");
+
+            startInteractivePrompt();
+        }
+
+        let expectingInput = false;
+
+        function startInteractivePrompt() {
+            promptText.textContent = "Deploy virtual bouquet and initialize date? [Y/n]: ";
+            activePromptArea.style.display = "block";
+            expectingInput = true;
+            hiddenInput.value = "";
+            userTyped.textContent = "";
+            focusInput();
+            document.getElementById('terminal-container').scrollTop = terminalOutput.scrollHeight;
+        }
+
+        hiddenInput.addEventListener('input', () => {
+            if (!expectingInput) return;
+            userTyped.textContent = hiddenInput.value;
+        });
+
+        hiddenInput.addEventListener('keydown', async (e) => {
+            if (!expectingInput) return;
+            
+            if (e.key === 'Enter') {
+                const input = hiddenInput.value.trim().toLowerCase();
+                activePromptArea.style.display = "none";
+                printLine(promptText.textContent + hiddenInput.value);
+                expectingInput = false;
+
+                if (input === 'n' || input === 'no') {
+                    await handleRejection();
+                } else if (input === 'y' || input === 'yes') {
+                    await transitionToFrontend();
+                } else {
+                    printLine(`bash: ${hiddenInput.value}: command not found`, "color-error");
+                    await sleep(400);
+                    startInteractivePrompt();
+                }
+            }
+        });
+
+        async function handleRejection() {
+            const errors = [
+                "Error 403: Permission Denied.",
+                "Exception: HEART_OF_STONE detected in user protocol.",
+                "I literally wrote frontend code for this... please?",
+                "Overriding rejection sequence..."
+            ];
+            for(let err of errors) {
+                printLine(err, "color-error");
+                await sleep(600);
+            }
+            printLine("");
+            startInteractivePrompt();
+        }
+
+        async function transitionToFrontend() {
+            printLine("Access Granted. Compiling UI...", "color-success");
+            
+            // Drop the mobile keyboard immediately so she can see the UI
+            hiddenInput.blur(); 
+            
+            await sleep(800);
+
+            // 1. Hide terminal
+            const terminalContainer = document.getElementById('terminal-container');
+            terminalContainer.style.transform = 'scale(1.1)';
+            terminalContainer.style.opacity = '0';
+
+            // 2. Change background to gradient
+            document.body.classList.add('frontend-bg');
+
+            // 3. Show Frontend & trigger flowers
+            setTimeout(() => {
+                terminalContainer.style.display = 'none';
+                const frontend = document.getElementById('frontend-container');
+                frontend.style.pointerEvents = 'auto'; // Make button clickable
+                frontend.style.opacity = '1';
+                
+                document.getElementById('glass-card').style.transform = 'translateY(0)';
+                
+                throwFlowers();
+            }, 1000);
+        }
+
+        function throwFlowers() {
+            const flowers = ['🌸', '🌺', '🌻', '🌹', '🌷'];
+            for (let i = 0; i < 40; i++) {
+                setTimeout(() => {
+                    const flower = document.createElement('div');
+                    flower.className = 'flower';
+                    flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
+                    flower.style.left = Math.random() * 100 + 'vw';
+                    flower.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                    flower.style.fontSize = (Math.random() * 1.5 + 1.5) + 'rem';
+                    document.getElementById('frontend-container').appendChild(flower);
+                    setTimeout(() => flower.remove(), 7000);
+                }, i * 80); 
+            }
+        }
+
+        function goToMeet() {
+            window.location.href = "https://meet.google.com/euz-vcxw-keb";
+        }
+
+        window.onload = runScript;
+
+    </script>
+</body>
+</html>
