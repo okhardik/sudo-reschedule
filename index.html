@@ -2,73 +2,81 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>bash - local</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Postman Runner: v2_reschedule</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* BASE STYLES */
+        /* BASE & MOBILE FIXES */
         body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
+            margin: 0; padding: 0;
+            height: 100dvh; /* Mobile viewport fix */
             width: 100vw;
             overflow: hidden;
-            background-color: #0c0c0c; /* Starts dark for terminal */
-            transition: background 2s ease;
+            background-color: #212121; /* Postman dark theme */
+            transition: background 1.5s ease;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- TERMINAL (BACKEND) UI --- */
-        #terminal-container {
+        /* --- API RUNNER (BACKEND) UI --- */
+        #api-console {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            padding: 20px;
+            padding: 15px;
             box-sizing: border-box;
             color: #d4d4d4;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 15px;
-            line-height: 1.4;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px; /* Optimized for mobile readability */
+            line-height: 1.5;
             overflow-y: auto;
             transition: opacity 1s ease, transform 1s ease;
             z-index: 10;
         }
 
-        #terminal-container::-webkit-scrollbar { width: 8px; }
-        #terminal-container::-webkit-scrollbar-track { background: #0c0c0c; }
-        #terminal-container::-webkit-scrollbar-thumb { background: #333; }
+        #api-console::-webkit-scrollbar { width: 6px; }
+        #api-console::-webkit-scrollbar-track { background: #212121; }
+        #api-console::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
 
-        .input-line { display: flex; align-items: center; }
-        #hidden-input { opacity: 0; position: absolute; z-index: -100; }
+        /* Syntax Highlighting */
+        .log-header { color: #9e9e9e; font-size: 11px; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        .method-post { color: #ffb300; font-weight: bold; } /* Postman orange */
+        .url { color: #81d4fa; }
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-punct { color: #d4d4d4; }
+        .status-401 { color: #ff9800; font-weight: bold; }
+        .status-403 { color: #f44336; font-weight: bold; }
+        .status-200 { color: #4caf50; font-weight: bold; }
+        .sys-prompt { color: #fff; margin-top: 20px; font-weight: 500; }
+
+        .line { margin-bottom: 4px; word-wrap: break-word; }
+        .indent-1 { margin-left: 15px; }
+        .indent-2 { margin-left: 30px; }
+
+        /* Interactive Elements */
+        #active-prompt-area { margin-top: 15px; display: none; }
+        #hidden-input { opacity: 0; position: absolute; z-index: -100; top: -1000px; }
         
         .cursor {
             display: inline-block;
-            width: 8px; height: 16px;
-            background-color: #d4d4d4;
+            width: 7px; height: 14px;
+            background-color: #ffb300; /* Orange cursor */
             animation: blink 1s step-end infinite;
-            vertical-align: bottom;
+            vertical-align: middle;
             margin-left: 2px;
         }
         .cursor.typing { animation: none; opacity: 1; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        .color-error { color: #f44336; }
-        .color-success { color: #4caf50; }
-        .color-highlight { color: #569cd6; }
-
         /* --- FRONTEND (ROMANTIC) UI --- */
         #frontend-container {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none; /* Can't click until visible */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none;
             transition: opacity 1.5s ease;
             z-index: 20;
             font-family: 'Poppins', sans-serif;
         }
 
-        /* Animated gradient background applied via JS */
         .frontend-bg {
             background: linear-gradient(-45deg, #1e1b4b, #312e81, #0f172a, #4c1d95) !important;
             background-size: 400% 400% !important;
@@ -83,13 +91,11 @@
 
         .glass-card {
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 24px;
-            padding: 3rem 2rem;
-            max-width: 500px;
-            width: 85%;
+            border-radius: 20px;
+            padding: 2.5rem 1.5rem;
+            width: 85%; max-width: 400px;
             text-align: center;
             box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5);
             transform: translateY(20px);
@@ -97,49 +103,24 @@
             color: white;
         }
 
-        .glass-card h1 {
-            font-size: 3.5rem;
-            margin: 0 0 10px 0;
-        }
-
-        .glass-card h2 {
-            font-weight: 400;
-            font-size: 1.4rem;
-            margin-bottom: 0.5rem;
-            color: #fbcfe8;
-        }
-
-        .glass-card p {
-            font-weight: 300;
-            font-size: 1.1rem;
-            color: #cbd5e1;
-            margin-bottom: 2.5rem;
-        }
+        .glass-card h1 { font-size: 3rem; margin: 0 0 5px 0; }
+        .glass-card h2 { font-weight: 400; font-size: 1.2rem; margin-bottom: 1rem; color: #fbcfe8; line-height: 1.4; }
+        .glass-card p { font-weight: 300; font-size: 0.95rem; color: #cbd5e1; margin-bottom: 2rem; }
 
         .btn-proceed {
             background: linear-gradient(135deg, #fb7185, #db2777);
-            color: white;
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            padding: 14px 32px;
-            border-radius: 50px;
-            border: none;
-            cursor: pointer;
+            color: white; font-family: 'Poppins', sans-serif;
+            font-size: 1rem; font-weight: 600;
+            padding: 12px 28px; border-radius: 50px; border: none;
+            cursor: pointer; width: 100%;
             box-shadow: 0 4px 15px rgba(219, 39, 119, 0.4);
             transition: all 0.3s ease;
+            -webkit-appearance: none; /* iOS fix */
         }
+        .btn-proceed:active { transform: scale(0.98); }
 
-        .btn-proceed:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(219, 39, 119, 0.6);
-        }
-
-        /* Flower animations */
         .flower {
-            position: fixed;
-            pointer-events: none;
-            z-index: 15;
+            position: fixed; pointer-events: none; z-index: 15;
             animation: floatUp ease-out forwards;
         }
 
@@ -151,11 +132,11 @@
 </head>
 <body onclick="focusInput()">
 
-    <!-- 1. TERMINAL UI -->
-    <div id="terminal-container">
-        <div id="terminal-output"></div>
-        <div id="active-prompt-area" style="display: none;">
-            <span id="prompt-text"></span><span id="user-typed"></span><span id="cursor" class="cursor"></span>
+    <!-- 1. API RUNNER UI -->
+    <div id="api-console">
+        <div id="log-output"></div>
+        <div id="active-prompt-area">
+            <span id="prompt-text" class="sys-prompt"></span><span id="user-typed" class="method-post"></span><span id="cursor" class="cursor"></span>
         </div>
         <input type="text" id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
@@ -171,85 +152,66 @@
     </div>
 
     <script>
-        const terminalOutput = document.getElementById('terminal-output');
+        const logOutput = document.getElementById('log-output');
         const hiddenInput = document.getElementById('hidden-input');
         const userTyped = document.getElementById('user-typed');
         const promptText = document.getElementById('prompt-text');
         const activePromptArea = document.getElementById('active-prompt-area');
         const cursor = document.getElementById('cursor');
 
-        // Keep input focused for mobile keyboards
+        // Mobile focus trick
         function focusInput() {
-            if(document.getElementById('terminal-container').style.opacity !== '0') {
+            if(document.getElementById('api-console').style.opacity !== '0') {
                 hiddenInput.focus();
             }
         }
 
-        // Terminal Boot Sequence
-        const bootSequence = [
-            "openssl req -new -newkey rsa:4096 -nodes -keyout exception.key -out reschedule.csr",
-            "Generating a 4096 bit RSA private key...",
-            "......................................................++",
-            ".....................++",
-            "writing new private key to 'exception.key'",
-            "-----",
-            "You are about to be asked to enter information that will be incorporated",
-            "into your secure date request.",
-            "What you are about to enter is what is called a Distinguished Name or a DN.",
-            "-----"
-        ];
-
-        // Terminal Auto-Inputs
-        const autoInputs = [
-            { prompt: "Incident Type (eg, failure) []:", answer: "UNEXPECTED_URGENT_EXCEPTION" },
-            { prompt: "Action Taken (eg, fix) []:", answer: "CODED_VIRTUAL_BOUQUET" },
-            { prompt: "Security Note (eg, warning) []:", answer: "ASKING_FOR_ADDRESS_ON_DAY_ONE_IS_A_VULNERABILITY" }
-        ];
-
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        function printLine(text, cssClass = "") {
+        function appendHTML(html) {
             const div = document.createElement('div');
-            if(cssClass) div.className = cssClass;
-            div.textContent = text;
-            terminalOutput.appendChild(div);
-            document.getElementById('terminal-container').scrollTop = terminalOutput.scrollHeight;
+            div.className = 'line';
+            div.innerHTML = html;
+            logOutput.appendChild(div);
+            document.getElementById('api-console').scrollTop = logOutput.scrollHeight;
         }
 
-        async function typeText(text, element) {
-            cursor.classList.add('typing');
-            for (let char of text) {
-                element.textContent += char;
-                await sleep(Math.random() * 50 + 30);
+        async function typeJSON(lines) {
+            for (let line of lines) {
+                appendHTML(line);
+                await sleep(150);
             }
-            cursor.classList.remove('typing');
         }
 
-        async function runScript() {
-            for (let line of bootSequence) {
-                printLine(line);
-                await sleep(300);
-            }
+        async function runPostmanScript() {
+            appendHTML(`<span class="log-header">Runner Collection: Date_Recovery_Protocol</span>`);
+            await sleep(600);
+            appendHTML(`<span class="log-header">Environment: Production</span>`);
+            await sleep(800);
+            
+            appendHTML(`<br><span class="method-post">POST</span> <span class="url">https://api.system.local/v2/reschedule</span>`);
             await sleep(500);
 
-            for (let item of autoInputs) {
-                const lineDiv = document.createElement('div');
-                lineDiv.textContent = item.prompt + " ";
-                terminalOutput.appendChild(lineDiv);
-                await sleep(400);
-                
-                const answerSpan = document.createElement('span');
-                lineDiv.appendChild(answerSpan);
-                await typeText(item.answer, answerSpan);
-                await sleep(200);
-            }
+            appendHTML(`<div class="log-header">Request Body:</div>`);
+            
+            // JSON Payload
+            const jsonBody = [
+                `<span class="json-punct">{</span>`,
+                `<div class="indent-1"><span class="json-key">"incident_type"</span><span class="json-punct">: </span><span class="json-string">"UNEXPECTED_URGENT_EXCEPTION"</span><span class="json-punct">,</span></div>`,
+                `<div class="indent-1"><span class="json-key">"action_taken"</span><span class="json-punct">: </span><span class="json-string">"CODED_VIRTUAL_BOUQUET"</span><span class="json-punct">,</span></div>`,
+                `<div class="indent-1"><span class="json-key">"security_protocol"</span><span class="json-punct">: </span><span class="json-string">"ASKING_ADDRESS_ON_DAY_ONE_IS_VULNERABILITY"</span><span class="json-punct">,</span></div>`,
+                `<div class="indent-1"><span class="json-key">"developer_note"</span><span class="json-punct">: </span><span class="json-string">"I_HOPE_THE_NEXT_ONES_ARE_REAL_🌻"</span></div>`,
+                `<span class="json-punct">}</span>`
+            ];
+            await typeJSON(jsonBody);
+            
+            await sleep(800);
+            appendHTML(`<br><span class="log-header">Sending Request...</span>`);
+            await sleep(1200);
 
-            printLine("-----");
-            printLine("Compiling frontend payload...");
-            await sleep(600);
-            printLine("Establishing secure P2P connection protocol.");
-            await sleep(400);
-            printLine("");
+            appendHTML(`<span class="status-401">401 Unauthorized</span>`);
+            appendHTML(`<span class="json-punct">Reason: Manual User Override Required.</span>`);
+            await sleep(800);
 
             startInteractivePrompt();
         }
@@ -257,35 +219,38 @@
         let expectingInput = false;
 
         function startInteractivePrompt() {
-            promptText.textContent = "Deploy virtual bouquet and initialize date? [Y/n]: ";
+            appendHTML(`<br>`);
+            promptText.innerHTML = `[SYSTEM] Authorize execution of virtual_bouquet.js? [Y/N]: `;
             activePromptArea.style.display = "block";
             expectingInput = true;
             hiddenInput.value = "";
             userTyped.textContent = "";
             focusInput();
-            document.getElementById('terminal-container').scrollTop = terminalOutput.scrollHeight;
+            document.getElementById('api-console').scrollTop = logOutput.scrollHeight;
         }
 
         hiddenInput.addEventListener('input', () => {
             if (!expectingInput) return;
-            userTyped.textContent = hiddenInput.value;
+            // Limit to 1 character for mobile typing cleanup
+            const val = hiddenInput.value.trim().toUpperCase();
+            userTyped.textContent = val.length > 0 ? val[val.length - 1] : "";
         });
 
         hiddenInput.addEventListener('keydown', async (e) => {
             if (!expectingInput) return;
             
             if (e.key === 'Enter') {
-                const input = hiddenInput.value.trim().toLowerCase();
+                const input = userTyped.textContent.toUpperCase();
                 activePromptArea.style.display = "none";
-                printLine(promptText.textContent + hiddenInput.value);
+                appendHTML(`<span class="sys-prompt">${promptText.textContent}</span><span class="method-post">${input}</span>`);
                 expectingInput = false;
 
-                if (input === 'n' || input === 'no') {
+                if (input === 'N') {
                     await handleRejection();
-                } else if (input === 'y' || input === 'yes') {
+                } else if (input === 'Y') {
                     await transitionToFrontend();
                 } else {
-                    printLine(`bash: ${hiddenInput.value}: command not found`, "color-error");
+                    appendHTML(`<span class="status-403">Error: Invalid input format.</span>`);
                     await sleep(400);
                     startInteractivePrompt();
                 }
@@ -293,41 +258,42 @@
         });
 
         async function handleRejection() {
-            const errors = [
-                "Error 403: Permission Denied.",
-                "Exception: HEART_OF_STONE detected in user protocol.",
-                "I literally wrote frontend code for this... please?",
-                "Overriding rejection sequence..."
+            appendHTML(`<br><span class="status-403">403 Forbidden</span>`);
+            const errJson = [
+                `<span class="json-punct">{</span>`,
+                `<div class="indent-1"><span class="json-key">"error"</span><span class="json-punct">: </span><span class="json-string">"HEART_OF_STONE"</span><span class="json-punct">,</span></div>`,
+                `<div class="indent-1"><span class="json-key">"message"</span><span class="json-punct">: </span><span class="json-string">"I literally wrote frontend code for this... please?"</span></div>`,
+                `<span class="json-punct">}</span>`
             ];
-            for(let err of errors) {
-                printLine(err, "color-error");
-                await sleep(600);
-            }
-            printLine("");
+            await typeJSON(errJson);
+            await sleep(1000);
+            appendHTML(`<span class="log-header">Overriding rejection sequence...</span>`);
+            await sleep(800);
             startInteractivePrompt();
         }
 
         async function transitionToFrontend() {
-            printLine("Access Granted. Compiling UI...", "color-success");
+            appendHTML(`<br><span class="status-200">200 OK</span>`);
+            appendHTML(`<span class="json-punct">{ "status": "Access Granted", "action": "Compiling UI" }</span>`);
             
-            // Drop the mobile keyboard immediately so she can see the UI
+            // Hide keyboard on mobile immediately
             hiddenInput.blur(); 
             
-            await sleep(800);
+            await sleep(1000);
 
-            // 1. Hide terminal
-            const terminalContainer = document.getElementById('terminal-container');
-            terminalContainer.style.transform = 'scale(1.1)';
-            terminalContainer.style.opacity = '0';
+            // 1. Hide API Console
+            const apiConsole = document.getElementById('api-console');
+            apiConsole.style.transform = 'scale(1.1)';
+            apiConsole.style.opacity = '0';
 
-            // 2. Change background to gradient
+            // 2. Change background
             document.body.classList.add('frontend-bg');
 
-            // 3. Show Frontend & trigger flowers
+            // 3. Show Frontend & throw flowers
             setTimeout(() => {
-                terminalContainer.style.display = 'none';
+                apiConsole.style.display = 'none';
                 const frontend = document.getElementById('frontend-container');
-                frontend.style.pointerEvents = 'auto'; // Make button clickable
+                frontend.style.pointerEvents = 'auto'; 
                 frontend.style.opacity = '1';
                 
                 document.getElementById('glass-card').style.transform = 'translateY(0)';
@@ -345,7 +311,7 @@
                     flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
                     flower.style.left = Math.random() * 100 + 'vw';
                     flower.style.animationDuration = (Math.random() * 3 + 4) + 's';
-                    flower.style.fontSize = (Math.random() * 1.5 + 1.5) + 'rem';
+                    flower.style.fontSize = (Math.random() * 1.2 + 1.2) + 'rem';
                     document.getElementById('frontend-container').appendChild(flower);
                     setTimeout(() => flower.remove(), 7000);
                 }, i * 80); 
@@ -356,7 +322,7 @@
             window.location.href = "https://meet.google.com/euz-vcxw-keb";
         }
 
-        window.onload = runScript;
+        window.onload = runPostmanScript;
 
     </script>
 </body>
